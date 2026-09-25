@@ -13,3 +13,7 @@ WHERE id = ?;
 SELECT id, tekst, usage_count 
 FROM provale 
 ORDER BY usage_count DESC;
+
+-- name: InsertProvala :exec
+INSERT INTO provale (tekst, usage_count)
+VALUES (?, 0);

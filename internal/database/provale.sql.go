@@ -78,3 +78,13 @@ func (q *Queries) IncrementProvalaUsage(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, incrementProvalaUsage, id)
 	return err
 }
+
+const insertProvala = `-- name: InsertProvala :exec
+INSERT INTO provale (tekst, usage_count)
+VALUES (?, 0)
+`
+
+func (q *Queries) InsertProvala(ctx context.Context, tekst string) error {
+	_, err := q.db.ExecContext(ctx, insertProvala, tekst)
+	return err
+}

@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"text/tabwriter"
 
@@ -76,6 +77,23 @@ func Start() {
 			s.ChannelMessageSend(m.ChannelID, resp)
 		}
 
+		if strings.HasPrefix(m.Content, ".dodaj ") {
+			msg := strings.TrimSpace(strings.TrimPrefix(m.Content, ".dodaj "))
+			if msg == "" {
+				s.ChannelMessageSend(m.ChannelID, "Invalid input, example: `.dodaj <quoute>`")
+				return
+			}
+			ctx := context.Background()
+			err := queries.InsertProvala(ctx, msg)
+			if err != nil {
+				log.Printf("Error adding qoute: %v", err)
+				s.ChannelMessageSend(m.ChannelID, "Error adding qoute.")
+				return
+			}
+
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Added new qoute: \"%s\"", msg))
+		}
+
 	})
 	err = dg.Open()
 	if err != nil {
@@ -85,6 +103,6 @@ func Start() {
 	fmt.Println("Ajzak turned on succesfully!")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
-	fmt.Println("Ajzak shutting down!")
 	<-sc
+	fmt.Println("Ajzak shutting down!")
 }
