@@ -32,6 +32,8 @@ Rather than selecting a completely random quote from the entire database every t
 
 ```text
 .
+├── bot/
+│   └── bot.go          # Core Discord bot setup, handlers, and initialization
 ├── db/
 │   ├── migrations/     # Goose SQL migrations (.sql files)
 │   └── queries/        # SQL queries read by sqlc (.sql)
@@ -42,7 +44,7 @@ Rather than selecting a completely random quote from the entire database every t
 ├── ajzak.db            # SQLite database file (auto-generated)
 ├── go.mod
 ├── go.sum
-├── main.go             # Main application logic, handlers, and graceful shutdown
+├── main.go             # Entry point (calls bot.Start())
 └── sqlc.yaml           # Configuration file for sqlc generator
 ```
 
@@ -56,7 +58,7 @@ Rather than selecting a completely random quote from the entire database every t
 
 ### 2. Clone the Repository & Install Dependencies
 ```bash
-git clone [https://github.com/YOUR_USERNAME/ajzak.git](https://github.com/YOUR_USERNAME/ajzak.git)
+git clone [https://github.com/markovic-dev/ajzak.git](https://github.com/markovic-dev/ajzak.git)
 cd ajzak
 go mod download
 ```
@@ -91,9 +93,17 @@ go run main.go
 | Command | Description |
 | :--- | :--- |
 | `.provala` | Randomly picks one of the least used quotes from the database, posts it, and increments its usage count. |
+| `.stats` | Displays a formatted table of all quotes, their IDs, and usage counts. |
+| `.dodaj <text>` | Adds a new quote directly to the SQLite database. |
 
 ---
 
 ## 🛡️ Graceful Shutdown
 
 The bot intercepts system signals (`SIGINT`, `SIGTERM`). When shutting down (e.g., pressing `CTRL+C`), it cleanly closes the WebSocket session with Discord and disconnects from the SQLite database to prevent data corruption.
+
+---
+
+## 🎤 Tribute
+
+This project is a fun, fan-made tribute to **Ajs Nigrutin** and his iconic punchlines, humor, and hip-hop legacy.
