@@ -8,3 +8,8 @@ LIMIT 5;
 UPDATE provale
 SET usage_count = usage_count + 1
 WHERE id = ?;
+
+-- name: GetAllProvaleStats :many
+SELECT id, tekst, usage_count 
+FROM provale 
+ORDER BY usage_count DESC;

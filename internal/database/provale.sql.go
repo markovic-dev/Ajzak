@@ -9,6 +9,35 @@ import (
 	"context"
 )
 
+const getAllProvaleStats = `-- name: GetAllProvaleStats :many
+SELECT id, tekst, usage_count 
+FROM provale 
+ORDER BY usage_count DESC
+`
+
+func (q *Queries) GetAllProvaleStats(ctx context.Context) ([]Provale, error) {
+	rows, err := q.db.QueryContext(ctx, getAllProvaleStats)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Provale
+	for rows.Next() {
+		var i Provale
+		if err := rows.Scan(&i.ID, &i.Tekst, &i.UsageCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLeastUsedProvale = `-- name: GetLeastUsedProvale :many
 SELECT id, tekst, usage_count
 FROM provale
