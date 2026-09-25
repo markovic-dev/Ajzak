@@ -1,23 +1,25 @@
 package bot
 
 import (
-	"bytes"
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
-	"math/rand/v2"
+
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"text/tabwriter"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"github.com/markovic-dev/ajzak/internal/database"
 	_ "modernc.org/sqlite"
 )
+
+type Bot struct {
+	Session *discordgo.Session
+	Queries *database.Queries
+}
 
 func Start() {
 	godotenv.Load()
@@ -37,63 +39,23 @@ func Start() {
 		if s.State.User.ID == m.Author.ID {
 			return
 		}
-		if m.Content == ".provala" {
-			msg, err := queries.GetLeastUsedProvale(context.Background())
-			if err != nil {
-				log.Printf("Unable to fetch responses from the database: %v", err)
-				return
-			}
-			index := rand.IntN(len(msg))
-			resp := msg[index]
-			s.ChannelMessageSend(m.ChannelID, resp.Tekst)
-			queries.IncrementProvalaUsage(context.Background(), resp.ID)
+		if !strings.HasPrefix(m.Content, ".") {
+			return
 		}
-
-		if m.Content == ".stats" {
-			ctx := context.Background()
-			stats, err := queries.GetAllProvaleStats(ctx)
-			if err != nil {
-				log.Printf("Error fetching statistics: %v", err)
-				s.ChannelMessageSend(m.ChannelID, "Unable to fetch stats.")
-				return
-			}
-
-			var buf bytes.Buffer
-			w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-
-			fmt.Fprintln(w, "ID\tProvala\tPuta")
-			fmt.Fprintln(w, "--\t-------\t---------")
-
-			for _, p := range stats {
-				msg := p.Tekst
-				if len(msg) > 30 {
-					msg = msg[:27] + "..."
-				}
-				fmt.Fprintf(w, "%d\t%s\t%dx\n", p.ID, msg, p.UsageCount)
-			}
-			w.Flush()
-
-			resp := "```\n" + buf.String() + "```"
-			s.ChannelMessageSend(m.ChannelID, resp)
+		bot := Bot{
+			Session: s,
+			Queries: queries,
 		}
-
-		if strings.HasPrefix(m.Content, ".dodaj ") {
-			msg := strings.TrimSpace(strings.TrimPrefix(m.Content, ".dodaj "))
-			if msg == "" {
-				s.ChannelMessageSend(m.ChannelID, "Invalid input, example: `.dodaj <quoute>`")
-				return
-			}
-			ctx := context.Background()
-			err := queries.InsertProvala(ctx, msg)
-			if err != nil {
-				log.Printf("Error adding qoute: %v", err)
-				s.ChannelMessageSend(m.ChannelID, "Error adding qoute.")
-				return
-			}
-
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Added new qoute: \"%s\"", msg))
+		switch {
+		case m.Content == ".provala":
+			bot.handleProvala(s, m)
+		case m.Content == ".stats":
+			bot.handleStats(s, m)
+		case strings.HasPrefix(m.Content, ".dodaj "):
+			bot.handleDodaj(s, m)
+		default:
+			bot.handleUnknown(s, m)
 		}
-
 	})
 	err = dg.Open()
 	if err != nil {
