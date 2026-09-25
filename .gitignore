@@ -1,0 +1,32 @@
+# Environment variables & secrets (NIPOŠTO NE ŠALJI NA GITHUB!)
+.env
+.env.*
+!.env.example
+
+# SQLite baza i privremeni fajlovi baze
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Executables & Binaries (kompajlirani Go fajlovi)
+*.exe
+*.exe instruction
+*.out
+*.app
+bin/
+ajzak
+ajzak.exe
+
+# IDE & Editor podešavanja
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
+
+# OS generisani fajlovi
+.DS_Store
+Thumbs.db
