@@ -1,9 +1,14 @@
-# Environment variables & secrets (NIPOŠTO NE ŠALJI NA GITHUB!)
+# Environment variables & secrets
 .env
 .env.*
 !.env.example
 
-# SQLite baza i privremeni fajlovi baze
+# Node.js dependencies
+node_modules/
+**/node_modules/
+npm-debug.log*
+
+# SQLite database
 *.db
 *.sqlite
 *.sqlite3
@@ -11,22 +16,30 @@
 *.db-wal
 *.db-shm
 
-# Executables & Binaries (kompajlirani Go fajlovi)
+# Executables & Binaries
 *.exe
-*.exe instruction
 *.out
 *.app
 bin/
 ajzak
 ajzak.exe
 
-# IDE & Editor podešavanja
+# Temporary audio files (yt-dlp / ffmpeg)
+*.webm
+*.m4a
+*.mp3
+*.opus
+*.wav
+downloads/
+temp/
+
+# IDE & Editor settings
 .vscode/
 .idea/
 *.swp
 *.swo
 *.log
 
-# OS generisani fajlovi
+# OS generated files
 .DS_Store
 Thumbs.db

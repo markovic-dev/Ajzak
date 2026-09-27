@@ -17,8 +17,9 @@ import (
 )
 
 type Bot struct {
-	Session *discordgo.Session
-	Queries *database.Queries
+	Session   *discordgo.Session
+	Queries   *database.Queries
+	VoiceConn *discordgo.VoiceConnection
 }
 
 func Start() {
@@ -34,7 +35,7 @@ func Start() {
 	}
 	defer db.Close()
 	queries := database.New(db)
-	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentMessageContent
+	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates | discordgo.IntentMessageContent
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if s.State.User.ID == m.Author.ID {
 			return
@@ -53,6 +54,17 @@ func Start() {
 			bot.handleStats(s, m)
 		case strings.HasPrefix(m.Content, ".dodaj "):
 			bot.handleDodaj(s, m)
+		case m.Content == ".leave":
+			bot.handleLeave(s, m)
+		case m.Content == ".join":
+			bot.handleJoin(s, m)
+		case strings.HasPrefix(m.Content, ".play"):
+			args := strings.Fields(m.Content)
+			if len(args) > 1 {
+				bot.handlePlay(s, m, args[1:])
+			} else {
+				bot.handlePlay(s, m, []string{})
+			}
 		default:
 			bot.handleUnknown(s, m)
 		}
