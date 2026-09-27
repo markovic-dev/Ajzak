@@ -1,109 +1,58 @@
-<h1 align="center">🎤 Ajzak Discord Bot (v1.0)</h1>
+<h1 align="center">🎵 Ajzak 2.0 — Discord Music Bot</h1>
 
 <p align="center">
-  A lightweight Discord bot written in Go that serves random quotes from a SQLite database using <code>discordgo</code>, <code>sqlc</code>, and <code>goose</code>.
+  <b>A modern, fast, and reliable Discord music bot built with a Go backend and a Node.js sidecar service.</b>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Discord.js-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.js" />
+  <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+  <img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white" alt="FFmpeg" />
 </p>
 
 ---
 
-## 🛠️ Tech Stack
+<h2>🏗️ Architecture Overview</h2>
 
-* **Language:** [Go (Golang)](https://go.dev/)
-* **Discord API:** [`discordgo`](https://github.com/bwmarrin/discordgo)
-* **Database:** [SQLite](https://sqlite.org/) via [`modernc.org/sqlite`](https://gitlab.com/cznic/sqlite) (Pure-Go driver, no CGO required)
-* **SQL Code Generation:** [`sqlc`](https://sqlc.dev/) (Type-safe SQL queries)
-* **Database Migrations:** [`goose`](https://github.com/pressly/goose)
-* **Environment Management:** [`godotenv`](https://github.com/joho/godotenv)
+Ajzak 2.0 utilizes the <b>Sidecar Microservice Pattern</b>:
 
----
-
-## 🧠 How the Rotation Algorithm Works
-
-Rather than selecting a completely random quote from the entire database every time, the bot ensures an even distribution of responses:
-
-1. Uses `sqlc` to fetch the **Top 5 least used quotes** from the SQLite database (`ORDER BY usage_count ASC LIMIT 5`).
-2. Randomly picks one quote out of those 5 using `math/rand/v2`.
-3. Sends the selected quote to the Discord channel.
-4. Atomically increments the `usage_count` for that quote in the database.
+- <b>Go Backend (Core):</b> The core engine of the bot. It handles user commands, database operations, metadata extraction (`yt-dlp -j`), queue state management (`sync.Mutex` Queue system), and rich Discord Embed rendering.
+- <b>Node.js Voice Sidecar:</b> Listens on `http://localhost:3000` as a network adapter for voice channels (`@discordjs/voice`). Handles E2EE (DAVE) encryption protocols and audio stream playback.
+- <b>Go Webhook Event Listener:</b> Listens on `http://localhost:8080` to receive webhook notifications from the Node.js service (e.g., track completion) and automatically triggers playback for the next queued song.
 
 ---
 
-## 📂 Project Structure
+<h2>✨ Features</h2>
 
-```text
-.
-├── bot/
-│   └── bot.go          # Core Discord bot setup, handlers, and initialization
-├── db/
-│   ├── migrations/     # Goose SQL migrations (.sql files)
-│   └── queries/        # SQL queries read by sqlc (.sql)
-├── internal/
-│   └── database/       # Auto-generated Go code produced by sqlc
-├── .env                # Environment configuration (tokens)
-├── .gitignore
-├── ajzak.db            # SQLite database file (auto-generated)
-├── go.mod
-├── go.sum
-├── main.go             # Entry point (calls bot.Start())
-└── sqlc.yaml           # Configuration file for sqlc generator
-```
+- 🎶 <b>High-Quality Audio Playback:</b> Native audio streaming powered by `yt-dlp` and `ffmpeg`.
+- 🖼️ <b>Compact Discord Embeds:</b> Clean displays featuring track title, uploader, duration, thumbnail, and requester tags.
+- 📜 <b>Per-Guild Queue System:</b> Robust queue management supporting track additions, skipping, and queue previews.
+- 🧹 <b>Smart Auto-Cleanup:</b>
+  - Automatic voice channel disconnect when all human users leave.
+  - Startup connection cleanup to clear stale sessions.
+  - Safe connection teardown on process exit (`Graceful Shutdown`).
 
 ---
 
-## 🚀 Getting Started Locally
+<h2>🛠️ Tech Stack & Prerequisites</h2>
 
-### 1. Prerequisites
-* [Go](https://go.dev/dl/) installed (version 1.22 or newer)
-* Discord Bot Token (configured in the [Discord Developer Portal](https://discord.com/developers/applications) with **Message Content Intent** enabled)
+The following dependencies must be installed and available in your system's `PATH`:
 
-### 2. Clone the Repository & Install Dependencies
+| Technology | Role |
+| :--- | :--- |
+| <img src="https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white" /> | Main bot logic, Queue system, and Command handlers |
+| <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" /> | Voice sidecar service (`@discordjs/voice`) |
+| <img src="https://img.shields.io/badge/FFmpeg-007808?style=flat-square&logo=ffmpeg&logoColor=white" /> | Audio stream encoding and decoding |
+| <img src="https://img.shields.io/badge/yt--dlp-FF0000?style=flat-square&logo=youtube&logoColor=white" /> | Extracting audio streams and video metadata |
+
+---
+
+<h2>🚀 Installation & Setup</h2>
+
+### 1. Clone the Repository
 ```bash
 git clone [https://github.com/markovic-dev/ajzak.git](https://github.com/markovic-dev/ajzak.git)
 cd ajzak
-go mod download
-```
-
-### 3. Configure Environment Variables
-Create a `.env` file in the root directory:
-```env
-DISCORD_TOKEN=your_discord_bot_token_here
-```
-
-### 4. Generate SQL Code (`sqlc`)
-If you modify SQL queries in `db/queries/`, run:
-```bash
-sqlc generate
-```
-
-### 5. Run Database Migrations (`goose`)
-To initialize the SQLite database schema and seed initial data, run:
-```bash
-goose -dir db/migrations sqlite3 ajzak.db up
-```
-
-### 6. Start the Bot
-```bash
-go run main.go
-```
-
----
-
-## 🎮 Commands
-
-| Command | Description |
-| :--- | :--- |
-| `.provala` | Randomly picks one of the least used quotes from the database, posts it, and increments its usage count. |
-| `.stats` | Displays a formatted table of all quotes, their IDs, and usage counts. |
-| `.dodaj <text>` | Adds a new quote directly to the SQLite database. |
-
----
-
-## 🛡️ Graceful Shutdown
-
-The bot intercepts system signals (`SIGINT`, `SIGTERM`). When shutting down (e.g., pressing `CTRL+C`), it cleanly closes the WebSocket session with Discord and disconnects from the SQLite database to prevent data corruption.
-
----
-
-## 🎤 Tribute
-
-This project is a fun, fan-made tribute to **Ajs Nigrutin** and his iconic punchlines, humor, and hip-hop legacy.
