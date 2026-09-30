@@ -45,7 +45,7 @@ Ajzak 2.0 utilizes the <b>Sidecar Microservice Pattern</b> to pair high-performa
 ### 🎵 Music Commands
 | Command | Description |
 | :--- | :--- |
-| `.pusti <URL / query>` | Plays audio directly from a URL or opens an interactive dropdown menu with YouTube search results |
+| `.play <URL / query>` | Plays audio directly from a URL or opens an interactive dropdown menu with YouTube search results |
 | `.skip` | Skips the current track and starts playing the next song in queue |
 | `.queue` | Displays current playing track and up to 10 upcoming tracks in queue |
 | `.stop` | Stops playback, clears the queue, and starts the 1-minute idle timer |
@@ -81,3 +81,25 @@ The following dependencies must be installed and available in your system's `PAT
 ```bash
 git clone [https://github.com/markovic-dev/ajzak.git](https://github.com/markovic-dev/ajzak.git)
 cd ajzak
+```
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory:
+```env
+DISCORD_TOKEN=your_bot_token_here
+PORT=8080
+VOICE_SERVICE_URL=http://localhost:3000
+```
+
+### 3. Start Node.js Voice Sidecar
+```bash
+cd voice-service
+npm install
+node index.js
+```
+
+### 4. Run Go Backend
+```bash
+# Open a new terminal in the project root
+go run main.go
+```
