@@ -17,9 +17,10 @@ import (
 )
 
 type Bot struct {
-	Session   *discordgo.Session
-	Queries   *database.Queries
-	VoiceConn *discordgo.VoiceConnection
+	Session        *discordgo.Session
+	Queries        *database.Queries
+	VoiceConn      *discordgo.VoiceConnection
+	NodeServiceURL string
 }
 
 func Start() {
@@ -35,7 +36,13 @@ func Start() {
 	}
 	defer db.Close()
 	queries := database.New(db)
+	b := &Bot{
+		Session:        dg,
+		Queries:        queries,
+		NodeServiceURL: "http://localhost:3000",
+	}
 	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates | discordgo.IntentMessageContent
+	dg.AddHandler(b.HandleInteraction)
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if s.State.User.ID == m.Author.ID {
 			return
@@ -43,30 +50,32 @@ func Start() {
 		if !strings.HasPrefix(m.Content, ".") {
 			return
 		}
-		bot := Bot{
-			Session: s,
-			Queries: queries,
-		}
 		switch {
 		case m.Content == ".provala":
-			bot.handleProvala(s, m)
+			b.handleProvala(s, m)
 		case m.Content == ".stats":
-			bot.handleStats(s, m)
+			b.handleStats(s, m)
 		case strings.HasPrefix(m.Content, ".dodaj "):
-			bot.handleDodaj(s, m)
+			b.handleDodaj(s, m)
 		case m.Content == ".leave":
-			bot.handleLeave(s, m)
+			b.handleLeave(s, m)
 		case m.Content == ".join":
-			bot.handleJoin(s, m)
-		case strings.HasPrefix(m.Content, ".play"):
+			b.handleJoin(s, m)
+		case m.Content == ".skip":
+			b.handleSkip(s, m)
+		case m.Content == ".queue":
+			b.handleQueue(s, m)
+		case m.Content == ".stop":
+			b.handleStop(s, m)
+		case strings.HasPrefix(m.Content, ".pusti") || strings.HasPrefix(m.Content, ".play"):
 			args := strings.Fields(m.Content)
 			if len(args) > 1 {
-				bot.handlePlay(s, m, args[1:])
+				b.handlePlay(s, m, args[1:])
 			} else {
-				bot.handlePlay(s, m, []string{})
+				b.handlePlay(s, m, []string{})
 			}
 		default:
-			bot.handleUnknown(s, m)
+			b.handleUnknown(s, m)
 		}
 	})
 	err = dg.Open()
@@ -74,7 +83,8 @@ func Start() {
 		log.Fatalf("Error establishing discord connection: %v", err)
 	}
 	defer dg.Close()
-	fmt.Println("Ajzak turned on succesfully!")
+	go StartEventServer(dg, b)
+	fmt.Println("Ajzak turned on successfully!")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 	<-sc

@@ -23,16 +23,31 @@ const client = new Client({
 
 const players = new Map();
 
+process.on('uncaughtException', (err) => {
+  if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+    return;
+  }
+  console.error('Aplikacijska greška:', err);
+});
 function getOrCreatePlayer(guildId) {
     if (!players.has(guildId)) {
         const player = createAudioPlayer();
 
-        player.on(AudioPlayerStatus.Idle, () => {
-            console.log(`🎵 Song ended on guild: ${guildId}`);
+        player.on(AudioPlayerStatus.Idle, async () => {
+            console.log(`Song on guild: ${guildId}`);
+            try {
+                await fetch('http://localhost:8080/events/song-ended', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guildId })
+                });
+            } catch (err) {
+                console.error('Error sending update to Go bot:', err.message);
+            }
         });
 
         player.on('error', error => {
-            console.error('AudioPlayer Error:', error);
+            console.error('AudioPlayer error:', error);
         });
 
         players.set(guildId, player);
@@ -43,17 +58,22 @@ function getOrCreatePlayer(guildId) {
 client.on('clientReady', async () => {
     console.log(`Node Voice Worker turned on: ${client.user.tag}`);
 
-    client.guilds.cache.forEach(async (guild) => {
-        const me = guild.members.me;
-        if (me && me.voice.channelId) {
-            console.log(`🧹 Connection cleanup ${guild.name}. Leaving...`);
-            try {
-                await me.voice.disconnect();
-            } catch (err) {
-                console.error('Error cleaning up:', err);
-            }
+client.guilds.cache.forEach(async (guild) => {
+    const me = guild.members.me;
+    if (me && me.voice.channelId) {
+        console.log(`🧹 Cleaning ghost connection in ${guild.name}...`);
+        try {
+            const connection = joinVoiceChannel({
+                channelId: me.voice.channelId,
+                guildId: guild.id,
+                adapterCreator: guild.voiceAdapterCreator,
+            });
+            connection.destroy();
+        } catch (err) {
+            console.error('Error cleaning up ghost connection:', err);
         }
-    });
+    }
+});
 });
 
 client.on('voiceStateUpdate', (oldState, newState) => {
@@ -110,7 +130,7 @@ app.post('/play', (req, res) => {
     if (!guildId || !url) return res.status(400).json({ error: 'Missing guildId or url' });
 
     const connection = getVoiceConnection(guildId);
-    if (!connection) return res.status(400).json({ error: 'Bot is not in a voice channel' });
+    if (!connection) return res.status(400).json({ error: 'Ajzak is not in a voice channel' });
 
     try {
         const ytdlp = spawn('yt-dlp', ['-o', '-', '-f', 'bestaudio', url]);
@@ -121,6 +141,10 @@ app.post('/play', (req, res) => {
             '-ac', '2',
             'pipe:1'
         ]);
+
+        ytdlp.stdout.on('error', err => { if (err.code === 'EPIPE') return; });
+        ffmpeg.stdin.on('error', err => { if (err.code === 'EPIPE') return; });
+        ffmpeg.stdout.on('error', err => { if (err.code === 'EPIPE') return; });
 
         ytdlp.stdout.pipe(ffmpeg.stdin);
 
@@ -143,7 +167,7 @@ app.post('/stop', (req, res) => {
     const { guildId } = req.body;
     const player = players.get(guildId);
     if (player) {
-        player.stop();
+        player.stop(true);
         return res.json({ status: 'ok' });
     }
     return res.status(400).json({ error: 'No active audio player' });
@@ -151,14 +175,23 @@ app.post('/stop', (req, res) => {
 
 app.post('/leave', (req, res) => {
     const { guildId } = req.body;
-    const connection = getVoiceConnection(guildId);
-    if (!connection) return res.status(400).json({ error: 'Bot not in voice channel' });
-
-    const player = players.get(guildId);
-    if (player) player.stop();
-
-    connection.destroy();
-    return res.json({ status: 'ok' });
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+        return res.status(404).json({ error: 'Guild not found' });
+    }
+    let connection = getVoiceConnection(guildId);
+    if (!connection && guild.members.me?.voice.channelId) {
+        connection = joinVoiceChannel({
+            channelId: guild.members.me.voice.channelId,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+        });
+    }
+    if (connection) {
+        connection.destroy();
+        return res.json({ success: true });
+    }
+    return res.status(400).json({ error: 'Ajzak is not in a voice channel' });
 });
 
 app.listen(3000, () => {
