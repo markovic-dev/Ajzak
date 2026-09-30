@@ -45,7 +45,7 @@ Ajzak 2.0 utilizes the <b>Sidecar Microservice Pattern</b> to pair high-performa
 ### 🎵 Music Commands
 | Command | Description |
 | :--- | :--- |
-| `.play <URL / query>` | Plays audio directly from a URL or opens an interactive dropdown menu with YouTube search results |
+| `.pusti <URL / query>` | Plays audio directly from a URL or opens an interactive dropdown menu with YouTube search results |
 | `.skip` | Skips the current track and starts playing the next song in queue |
 | `.queue` | Displays current playing track and up to 10 upcoming tracks in queue |
 | `.stop` | Stops playback, clears the queue, and starts the 1-minute idle timer |
