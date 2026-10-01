@@ -31,6 +31,7 @@ Ajzak 2.0 utilizes the <b>Sidecar Microservice Pattern</b> to pair high-performa
 - 🎶 <b>High-Quality Audio Playback:</b> Native audio streaming powered by `yt-dlp` and `ffmpeg`.
 - 🔍 <b>Interactive YouTube Search:</b> Search songs by text query and choose from top results using a native <b>Discord Select Menu (Dropdown)</b> component.
 - 📜 <b>Per-Guild Queue System:</b> Robust queue management supporting track additions, skipping, embed visualizers with durations, thumbnails, and requester tags.
+- 🔂 <b>Track Replay / Loop Mode:</b> Repeat the current track indefinitely until toggled off, skipped, or stopped.
 - ⏱️ <b>Smart Inactivity Idle Timer:</b> Automatically starts a 1-minute countdown when the queue empties or playback stops, disconnecting from the voice channel if no new songs are added.
 - 💬 <b>Quotes & Statistics System ("Provale"):</b> Persistent SQLite storage to save, fetch, and track statistics for community quotes and jokes.
 - 🧹 <b>Smart Auto-Cleanup:</b>
@@ -47,6 +48,7 @@ Ajzak 2.0 utilizes the <b>Sidecar Microservice Pattern</b> to pair high-performa
 | :--- | :--- |
 | `.pusti <URL / query>` | Plays audio directly from a URL or opens an interactive dropdown menu with YouTube search results |
 | `.skip` | Skips the current track and starts playing the next song in queue |
+| `.replay` | Toggles repeat mode for the current track (automatically disabled on `.skip`, `.stop`, or `.leave`) |
 | `.queue` | Displays current playing track and up to 10 upcoming tracks in queue |
 | `.stop` | Stops playback, clears the queue, and starts the 1-minute idle timer |
 | `.join` | Summons the bot to your current voice channel |
@@ -103,3 +105,9 @@ node index.js
 # Open a new terminal in the project root
 go run main.go
 ```
+
+---
+
+<p align="center"><br/>
+ This Discord bot is a tribute to — <b>Ajs Nigrutin (Ajzak)</b>.<br/>
+</p>
