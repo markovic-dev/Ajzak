@@ -3,10 +3,12 @@ package bot
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type SearchResult struct {
@@ -29,42 +31,60 @@ func FetchMetadata(url string) (*SongMetadata, error) {
 	if !strings.HasPrefix(query, "http://") && !strings.HasPrefix(query, "https://") {
 		query = "ytsearch1:" + query
 	}
-	cmd := exec.Command("yt-dlp", "-j", "--no-playlist", query)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "yt-dlp",
+		"-j",
+		"--no-playlist",
+		"--no-warnings",
+		"--quiet",
+		"--extractor-args", "youtube:player_client=android,web",
+		query,
+	)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("yt-dlp greška: %v", err)
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("yt-dlp Timeout (>20s)")
+		}
+		return nil, fmt.Errorf("yt-dlp Error: %v | Details: %s", err, stderr.String())
 	}
 	var meta SongMetadata
 	if err := json.Unmarshal(out, &meta); err != nil {
-		return nil, fmt.Errorf("greška pri parsiranju JSON-a: %v", err)
+		return nil, fmt.Errorf("Error parsing JSON: %v", err)
 	}
 	return &meta, nil
 }
 
 func SearchTracks(query string) ([]SearchResult, error) {
-	cmd := exec.Command("yt-dlp",
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "yt-dlp",
 		"ytsearch5:"+query,
 		"-j",
 		"--flat-playlist",
 		"--no-warnings",
 		"--ignore-errors",
+		"--quiet",
+		"--extractor-args", "youtube:player_client=android,web",
 	)
-
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("yt-dlp search error: %v", err)
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("yt-dlp Search timeout")
+		}
+		return nil, fmt.Errorf("yt-dlp search error: %v | Details: %s", err, stderr.String())
 	}
-
 	var results []SearchResult
 	scanner := bufio.NewScanner(bytes.NewReader(out))
-
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
 		}
-
-		// Privremena struktura za parsiranje raznolikih yt-dlp JSON odgovora
 		var raw struct {
 			Title    string  `json:"title"`
 			URL      string  `json:"url"`
@@ -73,9 +93,7 @@ func SearchTracks(query string) ([]SearchResult, error) {
 			Uploader string  `json:"uploader"`
 			Duration float64 `json:"duration"`
 		}
-
 		if err := json.Unmarshal(line, &raw); err == nil {
-			// Osiguravamo ispravan YouTube URL
 			finalURL := raw.WebURL
 			if finalURL == "" && raw.URL != "" {
 				finalURL = raw.URL
@@ -94,10 +112,8 @@ func SearchTracks(query string) ([]SearchResult, error) {
 			}
 		}
 	}
-
 	if len(results) == 0 {
-		return nil, fmt.Errorf("nema pronađenih rezultata")
+		return nil, fmt.Errorf("No results found.")
 	}
-
 	return results, nil
 }

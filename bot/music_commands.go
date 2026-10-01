@@ -123,6 +123,10 @@ func (b *Bot) handlePlay(s *discordgo.Session, m *discordgo.MessageCreate, args 
 }
 
 func (b *Bot) handleSkip(s *discordgo.Session, m *discordgo.MessageCreate) {
+	q := GlobalQueueManager.Get(m.GuildID)
+	q.mu.Lock()
+	q.IsReplay = false
+	q.mu.Unlock()
 	sendVoiceRequest("/stop", map[string]string{
 		"guildId": m.GuildID,
 	}, b)
@@ -164,6 +168,12 @@ func (b *Bot) handleQueue(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func (b *Bot) handleStop(s *discordgo.Session, m *discordgo.MessageCreate) {
 	q := GlobalQueueManager.Get(m.GuildID)
+	q.mu.Lock()
+	q.IsReplay = false
+	q.Songs = nil
+	q.Currently = nil
+	q.IsPlaying = false
+	q.mu.Unlock()
 	q.Clear()
 	sendVoiceRequest("/stop", map[string]string{
 		"guildId": m.GuildID,
@@ -174,6 +184,12 @@ func (b *Bot) handleStop(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func (b *Bot) handleLeave(s *discordgo.Session, m *discordgo.MessageCreate) {
 	q := GlobalQueueManager.Get(m.GuildID)
+	q.mu.Lock()
+	q.IsReplay = false
+	q.Songs = nil
+	q.Currently = nil
+	q.IsPlaying = false
+	q.mu.Unlock()
 	q.StopIdleTimer()
 	success := sendVoiceRequest("/leave", map[string]string{
 		"guildId": m.GuildID,
@@ -183,4 +199,23 @@ func (b *Bot) handleLeave(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	s.ChannelMessageSend(m.ChannelID, "Left the voice channel.")
+}
+
+func (b *Bot) handleReplay(s *discordgo.Session, m *discordgo.MessageCreate) {
+	q := GlobalQueueManager.Get(m.GuildID)
+	q.mu.Lock()
+	if !q.IsPlaying || q.Currently == nil {
+		q.mu.Unlock()
+		s.ChannelMessageSend(m.ChannelID, "❌ No song is currently streaming.")
+		return
+	}
+	q.IsReplay = !q.IsReplay
+	isReplayActive := q.IsReplay
+	songTitle := q.Currently.Title
+	q.mu.Unlock()
+	if isReplayActive {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("🔂 **Replay On ** : **%s**", songTitle))
+	} else {
+		s.ChannelMessageSend(m.ChannelID, "▶️ **Replay Off**.")
+	}
 }

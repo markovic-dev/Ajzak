@@ -22,6 +22,7 @@ type GuildQueue struct {
 	Songs             []*Song
 	IsPlaying         bool
 	idleTimer         *time.Timer
+	IsReplay          bool
 	LastTextChannelID string
 }
 

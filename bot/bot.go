@@ -74,6 +74,8 @@ func Start() {
 			} else {
 				b.handlePlay(s, m, []string{})
 			}
+		case m.Content == ".replay":
+			b.handleReplay(s, m)
 		default:
 			b.handleUnknown(s, m)
 		}

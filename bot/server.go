@@ -34,6 +34,26 @@ func StartEventServer(dg *discordgo.Session, b *Bot) {
 func PlayNextSong(s *discordgo.Session, guildID string, b *Bot) {
 	q := GlobalQueueManager.Get(guildID)
 	q.mu.Lock()
+	if q.IsReplay && q.Currently != nil {
+		song := q.Currently
+		textChannelID := q.LastTextChannelID
+		q.mu.Unlock()
+		success := sendVoiceRequest("/play", map[string]string{
+			"guildId": guildID,
+			"url":     song.URL,
+		}, b)
+		if !success {
+			if textChannelID != "" {
+				s.ChannelMessageSend(textChannelID, "❌ Error replaying song.")
+			}
+			q.mu.Lock()
+			q.IsPlaying = false
+			q.IsReplay = false
+			q.mu.Unlock()
+			return
+		}
+		return
+	}
 	if len(q.Songs) == 0 {
 		q.IsPlaying = false
 		q.Currently = nil
